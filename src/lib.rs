@@ -29,57 +29,59 @@ impl<'a> Preprocessor<'a> {
     }
 
     pub fn run(&self, src: &'a str) -> Result<String, Error> {
-        let result = self.run_entry(src, Vec::new());
+        let result = self.run_impl(None, src, Vec::new(), &mut Vec::new());
         Ok(result.join("\n"))
     }
 
-    fn run_entry(&self, src: &'a str, mut result: Vec<&'a str>) -> Vec<&'a str> {
+    fn run_impl(
+        &self,
+        name: Option<&'a str>,
+        src: &'a str,
+        mut result: Vec<&'a str>,
+        include_stack: &mut Vec<&'a str>,
+    ) -> Vec<&'a str> {
         lazy_static! {
             static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*include\s+[<"](?P<file>.*)[>"]"#).unwrap();
         }
+
+        // iterate through each line in src, if it matches INCLUDE_RE, then recurse, otherwise,
+        // push the line to the result buffer and continue
         for line in src.lines() {
             if let Some(caps) = INCLUDE_RE.captures(line) {
-                let file = &caps["file"];
-                if let Some(content) = self.files.get(file) {
-                    let mut content_result = self.run_entry(content, Vec::new());
-                    result.append(&mut content_result);
-                } else {
-                    panic!("{} not found", file);
+                // I'm not sure how this could ever panic
+                let cap_match = caps.name("file")
+                    .expect("Could not find capture group with name \"file\"");
+                let file = cap_match.as_str();
+
+                // if this file is already in our include stack, panic
+                if include_stack.contains(&file) {
+                    let name = name.unwrap();
+                    panic!(
+                        "Detected recursive file include in \"{}\" @ line \"{}\". include stack: {:?}",
+                        name, line, include_stack
+                    );
                 }
+                include_stack.push(&file);
+
+                // the src may include files that haven't been specified with Preprocessor::file,
+                match self.files.get(file) {
+                    Some(content) => {
+                        let mut content_result =
+                            self.run_impl(Some(file), content, Vec::new(), include_stack);
+                        result.append(&mut content_result);
+                    }
+                    None => {
+                        panic!(
+                        "Could not find file \"{file}\". help: need to call Preprocessor::file(\"{file}\", \"content\")",
+                        file = file);
+                    }
+                };
+
+                include_stack.pop();
             } else {
                 result.push(line);
             }
         }
         result
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_0() {
-        let src = "
-#version 410
-#include <hi.glsl>
-#include <bye.glsl>
-#if ok
-#include \"ok.glsl\"
-#else
-#include \"bad.glsl\"
-#endif
-void main() {
-}
-        ";
-        println!("{}", src);
-        let mut p = Preprocessor::new();
-        p = p.file("hi.glsl", "#include <aloha.glsl>\nvoid hi () {}");
-        p = p.file("bye.glsl", "void bye () {}");
-        p = p.file("ok.glsl", "void ok () {}");
-        p = p.file("bad.glsl", "void bad () {}");
-        p = p.file("aloha.glsl", "void aloha () {}");
-        let result = p.run(src).unwrap();
-        println!("{}", result);
     }
 }
