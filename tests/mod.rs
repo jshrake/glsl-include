@@ -37,6 +37,31 @@ fn quote_include() {
 }
 
 #[test]
+fn multiple_includes() {
+    let src = include_str!("duplicate_includes.glsl").trim_right();
+    let processed_src = Preprocessor::new()
+        .file("A.glsl", "void A() {}")
+        .run(src)
+        .unwrap();
+    assert_eq!(processed_src.lines().count(), 5);
+}
+
+#[test]
+fn recursive_multiple_includes() {
+    let src = include_str!("quote.glsl").trim_right();
+    let processed_src = Preprocessor::new()
+        .file(
+            "A.glsl",
+            "#include <B.glsl>\n#include <C.glsl>\nvoid A() {}",
+        )
+        .file("B.glsl", "#include <C.glsl>\nvoid B() {}")
+        .file("C.glsl", "void C() {}")
+        .run(src)
+        .unwrap();
+    assert_eq!(processed_src.lines().count(), 7);
+}
+
+#[test]
 #[should_panic]
 fn recursive_include() {
     let src = include_str!("quote.glsl").trim_right();

@@ -10,6 +10,7 @@ extern crate lazy_static;
 extern crate regex;
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use regex::Regex;
 
 #[derive(Debug)]
@@ -36,7 +37,7 @@ impl<'a> Preprocessor<'a> {
     }
 
     pub fn run(&self, src: &'a str) -> Result<String, Error> {
-        let result = self.run_impl(None, src, Vec::new(), &mut Vec::new());
+        let result = self.run_impl(None, src, Vec::new(), &mut Vec::new(), &mut BTreeSet::new());
         Ok(result.join("\n"))
     }
 
@@ -46,9 +47,10 @@ impl<'a> Preprocessor<'a> {
         src: &'a str,
         mut result: Vec<&'a str>,
         include_stack: &mut Vec<&'a str>,
+        include_set: &mut BTreeSet<&'a str>,
     ) -> Vec<&'a str> {
         lazy_static! {
-            static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*include\s+[<"](?P<file>.*)[>"]"#).unwrap();
+            static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
         }
 
         // iterate through each line in src, if it matches INCLUDE_RE, then recurse, otherwise,
@@ -60,9 +62,14 @@ impl<'a> Preprocessor<'a> {
                     .expect("Could not find capture group with name \"file\"");
                 let file = cap_match.as_str();
 
+                // if this file has already been included, continue to the next line
+                if include_set.contains(&file) {
+                    continue;
+                }
+
                 // if this file is already in our include stack, panic
                 if include_stack.contains(&file) {
-                    let name = name.unwrap();
+                    let name = name.expect("impossible");
                     panic!(
                         "Detected recursive file include in \"{}\" @ line \"{}\". include stack: {:?}",
                         name, line, include_stack
@@ -73,8 +80,13 @@ impl<'a> Preprocessor<'a> {
                 // the src may include files that haven't been specified with Preprocessor::file,
                 match self.files.get(file) {
                     Some(content) => {
-                        let mut content_result =
-                            self.run_impl(Some(file), content, Vec::new(), include_stack);
+                        let mut content_result = self.run_impl(
+                            Some(file),
+                            content,
+                            Vec::new(),
+                            include_stack,
+                            include_set,
+                        );
                         result.append(&mut content_result);
                     }
                     None => {
@@ -83,11 +95,14 @@ impl<'a> Preprocessor<'a> {
                         file = file);
                     }
                 };
-
                 include_stack.pop();
             } else {
                 result.push(line);
             }
+        }
+        // We're done processing this file, if it has a name, add it to the include_set
+        if let Some(name) = name {
+            include_set.insert(name);
         }
         result
     }
