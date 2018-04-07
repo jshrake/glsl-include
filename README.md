@@ -1,4 +1,4 @@
-# glsl_include
+# glsl_include [![Build Status](https://travis-ci.org/jshrake/glsl_include.svg?branch=master)](https://travis-ci.org/jshrake/glsl_include)
 
 ## License
 
