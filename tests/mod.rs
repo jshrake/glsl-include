@@ -5,32 +5,34 @@ use glsl_include::Preprocessor;
 #[test]
 fn no_include() {
     let src = include_str!("no_include.glsl").trim_right();
-    let p = Preprocessor::new();
-    let processed_src = p.run(src).unwrap();
+    let processed_src = Preprocessor::new().run(src).unwrap();
     assert_eq!(src, processed_src);
 }
 
 #[test]
 fn single_line_comments() {
     let src = include_str!("single_line_comments.glsl").trim_right();
-    let p = Preprocessor::new();
-    let processed_src = p.run(src).unwrap();
+    let processed_src = Preprocessor::new().run(src).unwrap();
     assert_eq!(src.lines().count(), processed_src.lines().count());
 }
 
 #[test]
 fn angle_bracket_include() {
     let src = include_str!("angle_bracket.glsl").trim_right();
-    let p = Preprocessor::new().file("A.glsl", "void A() {}");
-    let processed_src = p.run(src).unwrap();
+    let processed_src = Preprocessor::new()
+        .file("A.glsl", "void A() {}")
+        .run(src)
+        .unwrap();
     assert_eq!(src.lines().count(), processed_src.lines().count());
 }
 
 #[test]
 fn quote_include() {
     let src = include_str!("quote.glsl").trim_right();
-    let p = Preprocessor::new().file("A.glsl", "void A() {}");
-    let processed_src = p.run(src).unwrap();
+    let processed_src = Preprocessor::new()
+        .file("A.glsl", "void A() {}")
+        .run(src)
+        .unwrap();
     assert_eq!(src.lines().count(), processed_src.lines().count());
 }
 
