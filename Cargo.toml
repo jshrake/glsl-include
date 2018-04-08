@@ -7,6 +7,15 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 regex = "0.2"
 lazy_static = "1.0.0"
+criterion = { version = "0.2", optional = true } # for cargo bench
 
 [dev-dependencies]
 indoc = "0.2"
+
+[features]
+default = []
+benches = ["criterion"]
+
+[[bench]]
+name = "mod"
+harness = false

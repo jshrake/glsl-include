@@ -1,6 +1,7 @@
 extern crate glsl_include;
 #[macro_use]
 extern crate indoc;
+
 use glsl_include::Preprocessor;
 
 #[test]
