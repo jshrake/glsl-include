@@ -15,14 +15,14 @@ use regex::Regex;
 
 #[derive(Debug)]
 pub enum Error {
+    RecursiveInclude(String, String, Vec<String>),
+    FileNotFound(Option<String>, String),
 }
 
 #[derive(Debug)]
 pub struct Preprocessor<'a> {
     files: BTreeMap<&'a str, &'a str>,
 }
-
-pub type SourceMap = Vec<(Option<String>, usize)>;
 
 impl<'a> Preprocessor<'a> {
     pub fn new() -> Preprocessor<'a> {
@@ -37,8 +37,11 @@ impl<'a> Preprocessor<'a> {
     }
 
     pub fn run(&self, src: &'a str) -> Result<String, Error> {
-        let result = self.run_impl(None, src, Vec::new(), &mut Vec::new(), &mut BTreeSet::new());
-        Ok(result.join("\n"))
+        self.run_raw(src).map(|result| result.join("\n"))
+    }
+
+    pub fn run_raw(&self, src: &'a str) -> Result<Vec<&'a str>, Error> {
+        self.run_impl(None, src, Vec::new(), &mut Vec::new(), &mut BTreeSet::new())
     }
 
     fn run_impl(
@@ -48,7 +51,7 @@ impl<'a> Preprocessor<'a> {
         mut result: Vec<&'a str>,
         include_stack: &mut Vec<&'a str>,
         include_set: &mut BTreeSet<&'a str>,
-    ) -> Vec<&'a str> {
+    ) -> Result<Vec<&'a str>, Error> {
         lazy_static! {
             static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
         }
@@ -57,7 +60,7 @@ impl<'a> Preprocessor<'a> {
         // push the line to the result buffer and continue
         for line in src.lines() {
             if let Some(caps) = INCLUDE_RE.captures(line) {
-                // I'm not sure how this could ever panic
+                // The following expect should be impossible, but write a nice message anyways
                 let cap_match = caps.name("file")
                     .expect("Could not find capture group with name \"file\"");
                 let file = cap_match.as_str();
@@ -67,13 +70,12 @@ impl<'a> Preprocessor<'a> {
                     continue;
                 }
 
-                // if this file is already in our include stack, panic
+                // if this file is already in our include stack, return Err
                 if include_stack.contains(&file) {
-                    let name = name.expect("impossible");
-                    panic!(
-                        "Detected recursive file include in \"{}\" @ line \"{}\". include stack: {:?}",
-                        name, line, include_stack
-                    );
+                    let name = name.expect("impossible").to_string();
+                    let line = line.to_string();
+                    let stack = include_stack.into_iter().map(|s| s.to_string()).collect();
+                    return Err(Error::RecursiveInclude(name, line, stack));
                 }
                 include_stack.push(&file);
 
@@ -86,13 +88,13 @@ impl<'a> Preprocessor<'a> {
                             Vec::new(),
                             include_stack,
                             include_set,
-                        );
+                        )?;
                         result.append(&mut content_result);
                     }
                     None => {
-                        panic!(
-                        "Could not find file \"{file}\". help: need to call Preprocessor::file(\"{file}\", \"content\")",
-                        file = file);
+                        let name = name.map(|s| s.to_string());
+                        let file = file.to_string();
+                        return Err(Error::FileNotFound(name, file));
                     }
                 };
                 include_stack.pop();
@@ -104,6 +106,6 @@ impl<'a> Preprocessor<'a> {
         if let Some(name) = name {
             include_set.insert(name);
         }
-        result
+        Ok(result)
     }
 }
