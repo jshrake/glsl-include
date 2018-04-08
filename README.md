@@ -1,7 +1,9 @@
-# glsl-include &emsp; [![Build Status]][travis]
+# glsl-include &emsp; [![Build Status]][travis] [![Rustc Version 1.15+]][rustc]
 
 [Build Status]: https://travis-ci.org/jshrake/glsl-include.svg?branch=master
 [travis]: https://travis-ci.org/jshrake/glsl-include
+[Rustc Version 1.15+]: https://img.shields.io/badge/rustc-1.15+-lightgray.svg
+[rustc]: https://blog.rust-lang.org/2017/02/02/Rust-1.15.html
 
 **glsl-include is a rust library for expanding #include directives in GLSL source strings**
 
