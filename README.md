@@ -11,6 +11,15 @@
 
 ---
 
+## Quick Start
+
+Cargo.toml:
+
+```toml
+[dependencies]
+glsl-include = "0.1.0"
+```
+
 ## Benchmarks
 
 Benchmarking makes use of the optional criterion dependency, which depends on rust 1.23
