@@ -9,6 +9,23 @@
 
 ---
 
+## Benchmarks
+
+Benchmarking makes use of the optional criterion dependency, which depends on rust 1.23
+
+```
+cargo bench --features "criterion"
+```
+
+The workflow I currently use for benchmarking a changeset:
+
+```
+git checkout master; cargo bench --features "criterion"
+git checkout feature-branch; cargo bench --features "criterion"
+```
+
+For the best results with criterion, install `gnuplot` (macos: `brew install gnuplot`)
+
 ## License
 
 Licensed under either of
