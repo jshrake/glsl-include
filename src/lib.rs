@@ -41,17 +41,24 @@ impl<'a> Preprocessor<'a> {
     }
 
     pub fn run_raw(&self, src: &'a str) -> Result<Vec<&'a str>, Error> {
-        self.run_impl(None, src, Vec::new(), &mut Vec::new(), &mut BTreeSet::new())
+        let mut result = Vec::new();
+        self.run_recursive(
+            None,
+            src,
+            &mut result,
+            &mut Vec::new(),
+            &mut BTreeSet::new(),
+        ).map(move |_| result)
     }
 
-    fn run_impl(
+    fn run_recursive(
         &self,
         name: Option<&'a str>,
         src: &'a str,
-        mut result: Vec<&'a str>,
+        result: &mut Vec<&'a str>,
         include_stack: &mut Vec<&'a str>,
         include_set: &mut BTreeSet<&'a str>,
-    ) -> Result<Vec<&'a str>, Error> {
+    ) -> Result<(), Error> {
         lazy_static! {
             static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
         }
@@ -82,14 +89,13 @@ impl<'a> Preprocessor<'a> {
                 // the src may include files that haven't been specified with Preprocessor::file,
                 match self.files.get(file) {
                     Some(content) => {
-                        let mut content_result = self.run_impl(
+                        self.run_recursive(
                             Some(file),
                             content,
-                            Vec::new(),
+                            result,
                             include_stack,
                             include_set,
                         )?;
-                        result.append(&mut content_result);
                     }
                     None => {
                         let name = name.map(|s| s.to_string());
@@ -106,6 +112,6 @@ impl<'a> Preprocessor<'a> {
         if let Some(name) = name {
             include_set.insert(name);
         }
-        Ok(result)
+        Ok(())
     }
 }
