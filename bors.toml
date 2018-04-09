@@ -1,3 +1,5 @@
+# Disable appveyor + bors integration for now
 status = [
-  "continuous-integration/travis-ci/push"
+  "continuous-integration/travis-ci/push",
+#  "continuous-integration/appveyor/branch"
 ]

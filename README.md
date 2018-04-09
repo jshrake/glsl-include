@@ -1,7 +1,9 @@
-# glsl-include &emsp; [![Build Status]][travis] [![Latest Version]][crates.io] [![Rustc Version 1.15+]][rustc]
+# glsl-include &emsp; [![Build Status]][travis] [![Build Status-win]][appveyor] [![Latest Version]][crates.io] [![Rustc Version 1.15+]][rustc]
 
 [Build Status]: https://travis-ci.org/jshrake/glsl-include.svg?branch=master
 [travis]: https://travis-ci.org/jshrake/glsl-include
+[Build Status-win]: https://ci.appveyor.com/api/projects/status/3btnmxtpmabotj26?svg=true
+[appveyor]: https://ci.appveyor.com/project/jshrake/glsl-include
 [Latest Version]: https://img.shields.io/crates/v/glsl-include.svg
 [crates.io]: https://crates.io/crates/glsl-include
 [Rustc Version 1.15+]: https://img.shields.io/badge/rustc-1.15+-lightgray.svg
