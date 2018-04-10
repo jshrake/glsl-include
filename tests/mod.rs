@@ -2,7 +2,7 @@ extern crate glsl_include;
 #[macro_use]
 extern crate indoc;
 
-use glsl_include::{FileLine, Preprocessor, SourceMap};
+use glsl_include::{Context, FileLine, SourceMap};
 
 #[test]
 fn no_include() {
@@ -11,8 +11,8 @@ fn no_include() {
         void main() {
         }"
     );
-    let (processed_src, _) = Preprocessor::new().run(src).unwrap();
-    assert_eq!(src, processed_src);
+    let (expanded_src, _) = Context::new().expand(src).unwrap();
+    assert_eq!(src, expanded_src);
 }
 
 #[test]
@@ -23,8 +23,8 @@ fn single_line_comments() {
         // #include "A.glsl"
         void main() {}"#
     );
-    let (processed_src, _) = Preprocessor::new().run(src).unwrap();
-    assert_eq!(src, processed_src);
+    let (expanded_src, _) = Context::new().expand(src).unwrap();
+    assert_eq!(src, expanded_src);
 }
 
 #[test]
@@ -34,16 +34,16 @@ fn angle_bracket_include() {
         #include <A.glsl>
         void main() {}"#
     );
-    let (processed_src, _) = Preprocessor::new()
-        .file("A.glsl", "void A() {}")
-        .run(src)
+    let (expanded_src, _) = Context::new()
+        .include("A.glsl", "void A() {}")
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
         void A() {}
         void main() {}"#
     );
-    assert_eq!(expected, processed_src);
+    assert_eq!(expected, expanded_src);
 }
 
 #[test]
@@ -53,16 +53,16 @@ fn quote_include() {
         #include "A.glsl"
         void main() {}"#
     );
-    let (processed_src, _) = Preprocessor::new()
-        .file("A.glsl", "void A() {}")
-        .run(src)
+    let (expanded_src, _) = Context::new()
+        .include("A.glsl", "void A() {}")
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
         void A() {}
         void main() {}"#
     );
-    assert_eq!(expected, processed_src);
+    assert_eq!(expected, expanded_src);
 }
 
 fn source_map_compare(left: &SourceMap, right: &SourceMap) -> bool {
@@ -80,7 +80,7 @@ fn no_source_map() {
         r#"
         void main() {}"#
     );
-    let (_, source_map) = Preprocessor::new().run(src).unwrap();
+    let (_, source_map) = Context::new().expand(src).unwrap();
     assert_eq!(source_map.is_none(), true);
 }
 
@@ -90,7 +90,7 @@ fn with_source_map() {
         r#"
         void main() {}"#
     );
-    let (_, source_map) = Preprocessor::new().generate_source_map().run(src).unwrap();
+    let (_, source_map) = Context::new().generate_source_map().expand(src).unwrap();
     assert_eq!(source_map.is_some(), true);
 }
 
@@ -101,10 +101,10 @@ fn source_map_1() {
         #include "A.glsl"
         void main() {}"#
     );
-    let (_, source_map) = Preprocessor::new()
-        .file("A.glsl", "void A() {}")
+    let (_, source_map) = Context::new()
+        .include("A.glsl", "void A() {}")
         .generate_source_map()
-        .run(src)
+        .expand(src)
         .unwrap();
     let expected = vec![
         FileLine {
@@ -131,10 +131,10 @@ fn source_map_2() {
 
         void main() {}"#
     );
-    let (_, source_map) = Preprocessor::new()
-        .file("A.glsl", "void A() {}\nvoid A2() {}")
+    let (_, source_map) = Context::new()
+        .include("A.glsl", "void A() {}\nvoid A2() {}")
         .generate_source_map()
-        .run(src)
+        .expand(src)
         .unwrap();
     let expected = vec![
         FileLine {
@@ -173,16 +173,16 @@ fn duplicate_includes() {
         #include <A.glsl>
         void main() {}"#
     );
-    let (processed_src, _) = Preprocessor::new()
-        .file("A.glsl", "void A() {}")
-        .run(src)
+    let (expanded_src, _) = Context::new()
+        .include("A.glsl", "void A() {}")
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
         void A() {}
         void main() {}"#
     );
-    assert_eq!(expected, processed_src);
+    assert_eq!(expected, expanded_src);
 }
 
 #[test]
@@ -210,11 +210,11 @@ fn recursive_duplicate_includes() {
         r#"
         void C() {}"#
     );
-    let (processed_src, _) = Preprocessor::new()
-        .file("A.glsl", a_src)
-        .file("B.glsl", b_src)
-        .file("C.glsl", c_src)
-        .run(src)
+    let (expanded_src, _) = Context::new()
+        .include("A.glsl", a_src)
+        .include("B.glsl", b_src)
+        .include("C.glsl", c_src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -223,7 +223,7 @@ fn recursive_duplicate_includes() {
         void A() {}
         void main() {}"#
     );
-    assert_eq!(expected, processed_src);
+    assert_eq!(expected, expanded_src);
 }
 
 #[test]
@@ -239,7 +239,7 @@ fn recursive_include() {
         #include "A.glsl"
         void A() {}"#
     );
-    Preprocessor::new().file("A.glsl", a_src).run(src).unwrap();
+    Context::new().include("A.glsl", a_src).expand(src).unwrap();
 }
 
 #[test]
@@ -265,11 +265,11 @@ fn deep_recursive_include() {
         #include "A.glsl"
         void C() {}"#
     );
-    let result = Preprocessor::new()
-        .file("A.glsl", a_src)
-        .file("B.glsl", b_src)
-        .file("C.glsl", c_src)
-        .run(src);
+    let result = Context::new()
+        .include("A.glsl", a_src)
+        .include("B.glsl", b_src)
+        .include("C.glsl", c_src)
+        .expand(src);
     match result {
         Err(ref e) => println!("{}", e),
         Ok(_) => (),
@@ -285,7 +285,7 @@ fn non_existent_include() {
         #include "A.glsl"
         void main() {}"#
     );
-    let result = Preprocessor::new().run(src);
+    let result = Context::new().expand(src);
     match result {
         Err(ref e) => println!("{}", e),
         Ok(_) => (),

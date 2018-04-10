@@ -16,45 +16,50 @@ use regex::Regex;
 use error::Error;
 
 #[derive(Debug, Default)]
-pub struct Preprocessor<'a> {
+pub struct Context<'a> {
     files: BTreeMap<&'a str, &'a str>,
     should_generate_source_map: bool,
 }
 
+/// A map from the index to FileLine items. The index corresponds to the
+pub type SourceMap<'a> = Vec<FileLine<'a>>;
+
+///
 #[derive(Debug)]
 pub struct FileLine<'a> {
     pub file: Option<&'a str>,
     pub line: usize,
 }
 
-pub type SourceMap<'a> = Vec<FileLine<'a>>;
-
-impl<'a> Preprocessor<'a> {
-    pub fn new() -> Preprocessor<'a> {
-        Preprocessor {
+impl<'a> Context<'a> {
+    /// Returns a new Context
+    pub fn new() -> Context<'a> {
+        Context {
             ..Default::default()
         }
     }
 
-    pub fn file(mut self, path: &'a str, src: &'a str) -> Self {
-        self.files.insert(path, src);
+    /// Associates an #include <name> with a source string
+    pub fn include(mut self, name: &'a str, src: &'a str) -> Self {
+        self.files.insert(name, src);
         self
     }
 
+    /// Enables generating the source_map
     pub fn generate_source_map(mut self) -> Self {
         self.should_generate_source_map = true;
         self
     }
 
-    pub fn run(&self, src: &'a str) -> Result<(String, Option<SourceMap<'a>>), Error> {
-        self.run_raw(src)
+    pub fn expand(&self, src: &'a str) -> Result<(String, Option<SourceMap<'a>>), Error> {
+        self.expand_raw(src)
             .map(|(result, source_map)| (result.join("\n"), source_map))
     }
 
-    pub fn run_raw(&self, src: &'a str) -> Result<(Vec<&'a str>, Option<SourceMap<'a>>), Error> {
+    pub fn expand_raw(&self, src: &'a str) -> Result<(Vec<&'a str>, Option<SourceMap<'a>>), Error> {
         let mut result = Vec::new();
         let mut source_map = Vec::new();
-        self.run_recursive(
+        self.expand_recursive(
             None,
             src,
             &mut result,
@@ -73,7 +78,7 @@ impl<'a> Preprocessor<'a> {
         })
     }
 
-    fn run_recursive(
+    fn expand_recursive(
         &self,
         name: Option<&'a str>,
         src: &'a str,
@@ -115,9 +120,9 @@ impl<'a> Preprocessor<'a> {
                 }
                 include_stack.push(&file);
 
-                // the src may include files that haven't been specified with Preprocessor::file,
+                // the src may include files that haven't been specified with Context::file,
                 if let Some(content) = self.files.get(file) {
-                    self.run_recursive(
+                    self.expand_recursive(
                         Some(file),
                         content,
                         result,

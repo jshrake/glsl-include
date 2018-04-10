@@ -50,7 +50,7 @@ impl fmt::Display for Error {
                 ..
             } => write!(
                 f,
-                "Could not find file \"{}\", included from file {:?}, line {}\nhelp: Call Preprocessor::file with the file name and contents",
+                "Could not find file \"{}\", included from file {:?}, line {}\nhelp: Call Context::file with the file name and contents",
                 problem_include, in_file, line_num
             ),
         }
