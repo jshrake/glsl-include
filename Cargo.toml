@@ -5,6 +5,7 @@ authors = ["Justin Shrake <justinshrake@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "A library for expanding #include directives in GLSL source strings"
 repository = "https://github.com/jshrake/glsl-include"
+documentation = "https://docs.rs/glsl-include/"
 keywords = ["glsl-include", "glsl", "opengl"]
 categories = ["parsing", "rendering::data-formats"]
 readme = "README.md"
