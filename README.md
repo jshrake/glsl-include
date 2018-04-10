@@ -18,7 +18,7 @@
 Cargo.toml:
 ```toml
 [dependencies]
-glsl-include = "0.1.0"
+glsl-include = "0.2.1"
 ```
 
 main.rs:
