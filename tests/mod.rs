@@ -75,26 +75,6 @@ fn source_map_compare(left: &SourceMap, right: &SourceMap) -> bool {
 }
 
 #[test]
-fn no_source_map() {
-    let src = indoc!(
-        r#"
-        void main() {}"#
-    );
-    let (_, source_map) = Context::new().expand(src).unwrap();
-    assert_eq!(source_map.is_none(), true);
-}
-
-#[test]
-fn with_source_map() {
-    let src = indoc!(
-        r#"
-        void main() {}"#
-    );
-    let (_, source_map) = Context::new().generate_source_map().expand(src).unwrap();
-    assert_eq!(source_map.is_some(), true);
-}
-
-#[test]
 fn source_map_1() {
     let src = indoc!(
         r#"
@@ -103,7 +83,6 @@ fn source_map_1() {
     );
     let (_, source_map) = Context::new()
         .include("A.glsl", "void A() {}")
-        .generate_source_map()
         .expand(src)
         .unwrap();
     let expected = vec![
@@ -116,7 +95,6 @@ fn source_map_1() {
             line: 2,
         },
     ];
-    let source_map = source_map.unwrap();
     println!("Expected {:?}, got {:?}", expected, source_map);
     assert_eq!(expected.len(), source_map.len());
     assert_eq!(source_map_compare(&expected, &source_map), true);
@@ -133,7 +111,6 @@ fn source_map_2() {
     );
     let (_, source_map) = Context::new()
         .include("A.glsl", "void A() {}\nvoid A2() {}")
-        .generate_source_map()
         .expand(src)
         .unwrap();
     let expected = vec![
@@ -158,7 +135,6 @@ fn source_map_2() {
             line: 5,
         },
     ];
-    let source_map = source_map.unwrap();
     println!("Expected {:?}, got {:?}", expected, source_map);
     assert_eq!(expected.len(), source_map.len());
     assert_eq!(source_map_compare(&expected, &source_map), true);

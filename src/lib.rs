@@ -18,7 +18,6 @@ use error::Error;
 #[derive(Debug, Default)]
 pub struct Context<'a> {
     files: BTreeMap<&'a str, &'a str>,
-    should_generate_source_map: bool,
 }
 
 /// A map from the index to FileLine items. The index corresponds to the
@@ -45,18 +44,12 @@ impl<'a> Context<'a> {
         self
     }
 
-    /// Enables generating the source_map
-    pub fn generate_source_map(mut self) -> Self {
-        self.should_generate_source_map = true;
-        self
-    }
-
-    pub fn expand(&self, src: &'a str) -> Result<(String, Option<SourceMap<'a>>), Error> {
+    pub fn expand(&self, src: &'a str) -> Result<(String, SourceMap<'a>), Error> {
         self.expand_raw(src)
             .map(|(result, source_map)| (result.join("\n"), source_map))
     }
 
-    pub fn expand_raw(&self, src: &'a str) -> Result<(Vec<&'a str>, Option<SourceMap<'a>>), Error> {
+    pub fn expand_raw(&self, src: &'a str) -> Result<(Vec<&'a str>, SourceMap<'a>), Error> {
         let mut result = Vec::new();
         let mut source_map = Vec::new();
         self.expand_recursive(
@@ -66,16 +59,7 @@ impl<'a> Context<'a> {
             &mut source_map,
             &mut Vec::new(),
             &mut BTreeSet::new(),
-        ).map(move |_| {
-            (
-                result,
-                if self.should_generate_source_map {
-                    Some(source_map)
-                } else {
-                    None
-                },
-            )
-        })
+        ).map(move |_| (result, source_map))
     }
 
     fn expand_recursive(
@@ -142,12 +126,10 @@ impl<'a> Context<'a> {
                 include_stack.pop();
             } else {
                 result.push(line);
-                if self.should_generate_source_map {
-                    source_map.push(FileLine {
-                        file: name,
-                        line: result.len(),
-                    });
-                }
+                source_map.push(FileLine {
+                    file: name,
+                    line: result.len(),
+                });
             }
         }
         // We're done processing this file, if it has a name, add it to the include_set
