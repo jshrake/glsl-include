@@ -16,10 +16,33 @@
 ## Quick Start
 
 Cargo.toml:
-
 ```toml
 [dependencies]
 glsl-include = "0.1.0"
+```
+
+main.rs:
+
+```rust
+extern crate glsl_include;
+use glsl_include::Context;
+
+fn main () {
+    let main = r"
+        #version 410
+        #include <platform.glsl>
+        #include <common.glsl>
+        out vec4 fragColor;
+        void main () {
+            fragColor = vec4(1.0);
+        }";
+    let platform = "void platform_fn() {}";
+    let common = "uniform float iTime;";
+    let (expanded_src, source_map) = Context::new()
+        .include("platform.glsl", platform)
+        .include("common.glsl",common)
+        .expand_to_string(main).unwrap();
+}
 ```
 
 ## Benchmarks
