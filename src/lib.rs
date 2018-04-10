@@ -11,12 +11,63 @@ extern crate regex;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::fmt;
 use regex::Regex;
 
 #[derive(Debug)]
 pub enum Error {
-    RecursiveInclude(String, String, Vec<String>),
-    FileNotFound(Option<String>, String),
+    RecursiveInclude {
+        file: Option<String>,
+        recursive_file: String,
+        line_num: usize,
+        include_stack: Vec<String>,
+    },
+    FileNotFound {
+        file: Option<String>,
+        not_found: String,
+        line_num: usize,
+    },
+}
+
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
+        match self {
+            &Error::RecursiveInclude { .. } => "Detected recursive #include",
+            &Error::FileNotFound { .. } => "Could not find #include file",
+        }
+    }
+
+    fn cause(&self) -> Option<&std::error::Error> {
+        None
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Error::RecursiveInclude {
+                ref file,
+                ref recursive_file,
+                ref line_num,
+                ref include_stack,
+                ..
+            } => write!(
+                f,
+                "Detected recursive include of file \"{}\" in file {:?}, line {}, include stack {:?}",
+                recursive_file, file, line_num, include_stack
+            ),
+            &Error::FileNotFound {
+                ref not_found,
+                ref file,
+                ref line_num,
+                ..
+            } => write!(
+                f,
+                "Could not find file \"{}\", included from file {:?}, line {}\nhelp: Call Preprocessor::file with the file name and contents",
+                not_found, file, line_num
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -103,13 +154,17 @@ impl<'a> Preprocessor<'a> {
                 if include_set.contains(&file) {
                     continue;
                 }
+                let line_num = result.len();
 
                 // if this file is already in our include stack, return Err
                 if include_stack.contains(&file) {
-                    let name = name.expect("impossible").to_string();
-                    let line = line.to_string();
                     let stack = include_stack.into_iter().map(|s| s.to_string()).collect();
-                    return Err(Error::RecursiveInclude(name, line, stack));
+                    return Err(Error::RecursiveInclude {
+                        file: name.map(|s| s.to_string()),
+                        recursive_file: file.to_string(),
+                        line_num: line_num,
+                        include_stack: stack,
+                    });
                 }
                 include_stack.push(&file);
 
@@ -124,9 +179,11 @@ impl<'a> Preprocessor<'a> {
                         include_set,
                     )?;
                 } else {
-                    let name = name.map(|s| s.to_string());
-                    let file = file.to_string();
-                    return Err(Error::FileNotFound(name, file));
+                    return Err(Error::FileNotFound {
+                        file: name.map(|s| s.to_string()),
+                        not_found: file.to_string(),
+                        line_num: line_num,
+                    });
                 }
                 include_stack.pop();
             } else {
