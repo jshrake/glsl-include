@@ -19,7 +19,7 @@ pub enum Error {
     FileNotFound(Option<String>, String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Preprocessor<'a> {
     files: BTreeMap<&'a str, &'a str>,
     should_generate_source_map: bool,
@@ -36,8 +36,7 @@ pub type SourceMap<'a> = Vec<FileLine<'a>>;
 impl<'a> Preprocessor<'a> {
     pub fn new() -> Preprocessor<'a> {
         Preprocessor {
-            files: BTreeMap::new(),
-            should_generate_source_map: false,
+            ..Default::default()
         }
     }
 
@@ -115,23 +114,20 @@ impl<'a> Preprocessor<'a> {
                 include_stack.push(&file);
 
                 // the src may include files that haven't been specified with Preprocessor::file,
-                match self.files.get(file) {
-                    Some(content) => {
-                        self.run_recursive(
-                            Some(file),
-                            content,
-                            result,
-                            source_map,
-                            include_stack,
-                            include_set,
-                        )?;
-                    }
-                    None => {
-                        let name = name.map(|s| s.to_string());
-                        let file = file.to_string();
-                        return Err(Error::FileNotFound(name, file));
-                    }
-                };
+                if let Some(content) = self.files.get(file) {
+                    self.run_recursive(
+                        Some(file),
+                        content,
+                        result,
+                        source_map,
+                        include_stack,
+                        include_set,
+                    )?;
+                } else {
+                    let name = name.map(|s| s.to_string());
+                    let file = file.to_string();
+                    return Err(Error::FileNotFound(name, file));
+                }
                 include_stack.pop();
             } else {
                 result.push(line);
