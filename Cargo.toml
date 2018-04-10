@@ -1,6 +1,6 @@
 [package]
 name = "glsl-include"
-version = "0.2.1"
+version = "0.2.2-alpha.0"
 authors = ["Justin Shrake <justinshrake@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "A library for expanding #include directives in GLSL source strings"
