@@ -1,4 +1,3 @@
-#[cfg(feature = "benches")]
 #[macro_use]
 extern crate criterion;
 extern crate glsl_include;
