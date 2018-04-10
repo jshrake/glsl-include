@@ -265,12 +265,16 @@ fn deep_recursive_include() {
         #include "A.glsl"
         void C() {}"#
     );
-    Preprocessor::new()
+    let result = Preprocessor::new()
         .file("A.glsl", a_src)
         .file("B.glsl", b_src)
         .file("C.glsl", c_src)
-        .run(src)
-        .unwrap();
+        .run(src);
+    match result {
+        Err(ref e) => println!("{}", e),
+        Ok(_) => (),
+    };
+    result.unwrap();
 }
 
 #[test]
@@ -281,5 +285,10 @@ fn non_existent_include() {
         #include "A.glsl"
         void main() {}"#
     );
-    Preprocessor::new().run(src).unwrap();
+    let result = Preprocessor::new().run(src);
+    match result {
+        Err(ref e) => println!("{}", e),
+        Ok(_) => (),
+    };
+    result.unwrap();
 }
