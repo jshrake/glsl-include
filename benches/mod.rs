@@ -4,7 +4,7 @@ extern crate glsl_include;
 #[macro_use]
 extern crate indoc;
 
-use glsl_include::Preprocessor;
+use glsl_include::Context;
 use criterion::Criterion;
 
 fn no_include(c: &mut Criterion) {
@@ -13,8 +13,8 @@ fn no_include(c: &mut Criterion) {
         void main() {
         }"
     );
-    let p = Preprocessor::new();
-    c.bench_function("no includes", move |b| b.iter(|| p.run(src).unwrap()));
+    let p = Context::new();
+    c.bench_function("no includes", move |b| b.iter(|| p.expand(src).unwrap()));
 }
 
 fn three_includes(c: &mut Criterion) {
@@ -41,11 +41,11 @@ fn three_includes(c: &mut Criterion) {
         void main() {
         }"
     );
-    let p = Preprocessor::new()
-        .file("A.glsl", a_src)
-        .file("B.glsl", b_src)
-        .file("C.glsl", c_src);
-    c.bench_function("three includes", move |b| b.iter(|| p.run(src).unwrap()));
+    let p = Context::new()
+        .include("A.glsl", a_src)
+        .include("B.glsl", b_src)
+        .include("C.glsl", c_src);
+    c.bench_function("three includes", move |b| b.iter(|| p.expand(src).unwrap()));
 }
 
 fn recursive_includes(c: &mut Criterion) {
@@ -72,12 +72,12 @@ fn recursive_includes(c: &mut Criterion) {
         void main() {
         }"
     );
-    let p = Preprocessor::new()
-        .file("A.glsl", a_src)
-        .file("B.glsl", b_src)
-        .file("C.glsl", c_src);
+    let p = Context::new()
+        .include("A.glsl", a_src)
+        .include("B.glsl", b_src)
+        .include("C.glsl", c_src);
     c.bench_function("recursive includes", move |b| {
-        b.iter(|| p.run(src).unwrap())
+        b.iter(|| p.expand(src).unwrap())
     });
 }
 
