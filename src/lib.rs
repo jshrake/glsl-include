@@ -116,7 +116,7 @@ impl<'a> Context<'a> {
         include_set: &mut BTreeSet<&'a str>,
     ) -> Result<(), Error> {
         lazy_static! {
-            static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
+            static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*(pragma\s*)?include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
         }
 
         // Iterate through each line in the src input

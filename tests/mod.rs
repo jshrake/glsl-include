@@ -261,6 +261,48 @@ fn recursive_duplicate_includes() {
 }
 
 #[test]
+fn pragma_include() {
+    let src = indoc!(
+        r#"
+        #pragma  include "A.glsl"
+        void main() {}"#
+    );
+    let (expand_to_stringed_src, _) = Context::new()
+        .include("A.glsl", "void A() {}")
+        .expand_to_string(src)
+        .unwrap();
+    let expected = indoc!(
+        r#"
+        void A() {}
+        void main() {}"#
+    );
+    assert_eq!(expected, expand_to_stringed_src);
+}
+
+#[test]
+fn weird_pragma_include() {
+    let src = indoc!(
+        r#"
+        #pragmapragma include "A.glsl"
+        #pragma pragma include "A.glsl"
+        # pragma  include "A.glsl"
+        void main() {}"#
+    );
+    let (expand_to_stringed_src, _) = Context::new()
+        .include("A.glsl", "void A() {}")
+        .expand_to_string(src)
+        .unwrap();
+    let expected = indoc!(
+        r#"
+        #pragmapragma include "A.glsl"
+        #pragma pragma include "A.glsl"
+        void A() {}
+        void main() {}"#
+    );
+    assert_eq!(expected, expand_to_stringed_src);
+}
+
+#[test]
 #[should_panic]
 fn recursive_include() {
     let src = indoc!(

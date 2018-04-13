@@ -45,6 +45,10 @@ fn main () {
 }
 ```
 
+## #pragma include
+
+The library also expands `#pragma include` statements with no additonal configuration required.
+
 ## Benchmarks
 
 Benchmarking makes use of the optional criterion dependency, which depends on rust 1.23
