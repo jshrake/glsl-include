@@ -20,7 +20,7 @@ script:
   - cargo --version
   - cargo build --all --verbose
   - cargo test --all --verbose
-  - cargo doc --all --verbose
+  - cargo doc --verbose
 
 branches:
   only:
