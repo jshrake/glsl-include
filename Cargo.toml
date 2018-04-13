@@ -1,6 +1,6 @@
 [package]
 name = "glsl-include"
-version = "0.2.3-alpha.0"
+version = "0.2.3"
 authors = ["Justin Shrake <justinshrake@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "A library for expanding #include directives in GLSL source strings"
@@ -14,6 +14,11 @@ include = ["src/*.rs","Cargo.toml","README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 [badges]
 travis-ci = { repository = "jshrake/glsl-include" }
 appveyor = { repository = "jshrake/glsl-include" }
+
+[workspace]
+members = [
+  "glsl-include-capi"
+]
 
 [dependencies]
 regex = "0.2"
