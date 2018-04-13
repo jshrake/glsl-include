@@ -120,11 +120,69 @@ fn source_map_2() {
         },
         FileLine {
             file: Some("A.glsl"),
+            line: 0,
+        },
+        FileLine {
+            file: Some("A.glsl"),
+            line: 1,
+        },
+        FileLine {
+            file: None,
+            line: 2,
+        },
+        FileLine {
+            file: None,
+            line: 3,
+        },
+    ];
+    println!("Expected {:?}, got {:?}", expected, source_map);
+    assert_eq!(expected.len(), source_map.len());
+    assert_eq!(source_map_compare(&expected, &source_map), true);
+}
+
+#[test]
+fn source_map_3() {
+    let src = indoc!(
+        r#"
+        #version 410 core
+        #include <A.glsl>
+        #include <C.glsl>
+
+        void main() {}"#
+    );
+    let (_, source_map) = Context::new()
+        .include(
+            "A.glsl",
+            "#include <B.glsl>\nvoid A1(){}\nvoid A2(){}\n#include <C.glsl>",
+        )
+        .include("B.glsl", "void B1(){}\nvoid B2(){}")
+        .include("C.glsl", "void C1(){}")
+        .expand_to_string(src)
+        .unwrap();
+    let expected = vec![
+        FileLine {
+            file: None,
+            line: 0,
+        },
+        FileLine {
+            file: Some("B.glsl"),
+            line: 0,
+        },
+        FileLine {
+            file: Some("B.glsl"),
+            line: 1,
+        },
+        FileLine {
+            file: Some("A.glsl"),
             line: 1,
         },
         FileLine {
             file: Some("A.glsl"),
             line: 2,
+        },
+        FileLine {
+            file: Some("C.glsl"),
+            line: 0,
         },
         FileLine {
             file: None,

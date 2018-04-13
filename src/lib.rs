@@ -122,7 +122,7 @@ impl<'a> Context<'a> {
         // Iterate through each line in the src input
         // - If the line matches our INCLUDE_RE regex, recurse
         // - Otherwise, add the line to our outputs and continue to the next line
-        for line in src.lines() {
+        for (line_num, line) in src.lines().enumerate() {
             if let Some(caps) = INCLUDE_RE.captures(line) {
                 // The following expect should be impossible, but write a nice message anyways
                 let cap_match = caps.name("file")
@@ -139,7 +139,6 @@ impl<'a> Context<'a> {
                 // this signals that we're in an infinite loop
                 if include_stack.contains(&included_file) {
                     let in_file = in_file.map(|s| s.to_string());
-                    let line_num = expanded_src.len();
                     let problem_include = included_file.to_string();
                     let include_stack = include_stack.into_iter().map(|s| s.to_string()).collect();
                     return Err(Error::RecursiveInclude {
@@ -164,7 +163,6 @@ impl<'a> Context<'a> {
                     include_stack.pop();
                 } else {
                     let in_file = in_file.map(|s| s.to_string());
-                    let line_num = expanded_src.len();
                     let problem_include = included_file.to_string();
                     return Err(Error::FileNotFound {
                         in_file: in_file,
@@ -174,7 +172,6 @@ impl<'a> Context<'a> {
                 }
             } else {
                 // Got a regular line
-                let line_num = expanded_src.len();
                 expanded_src.push(line);
                 source_map.push(FileLine {
                     file: in_file,
