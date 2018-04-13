@@ -34,12 +34,12 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
-pub mod error;
+mod error;
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use regex::Regex;
-use error::Error;
+pub use error::Error;
 
 /// A Context stores data required to expand source string inputs
 #[derive(Debug, Default)]
@@ -68,7 +68,7 @@ impl<'a> Context<'a> {
     }
 
     /// Associates an #include name with a GLSL source string
-    pub fn include(mut self, name: &'a str, src: &'a str) -> Self {
+    pub fn include(&mut self, name: &'a str, src: &'a str) -> &mut Self {
         self.included_files.insert(name, src);
         self
     }
