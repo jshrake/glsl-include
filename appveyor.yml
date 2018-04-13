@@ -120,7 +120,6 @@ build: false
 test_script:
   - rustc --version %cargoflags%
   - cargo --version %cargoflags%
-  - cargo build --all --verbose %cargoflags%
   - cargo test --all --verbose %cargoflags%
   - cargo doc --verbose %cargoflags%
 

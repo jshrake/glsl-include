@@ -18,7 +18,6 @@ matrix:
 script:
   - rustc --version
   - cargo --version
-  - cargo build --all --verbose
   - cargo test --all --verbose
   - cargo doc --verbose
 
