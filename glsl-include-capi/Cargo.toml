@@ -9,5 +9,4 @@ name = "gli"
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-libc = "0.2"
 glsl-include = { version = "0.2", path = ".." }
