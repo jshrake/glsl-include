@@ -41,10 +41,10 @@ fn three_includes(c: &mut Criterion) {
         void main() {
         }"
     );
-    let p = Context::new()
-        .include("A.glsl", a_src)
-        .include("B.glsl", b_src)
-        .include("C.glsl", c_src);
+    let mut p = Context::new();
+    p.include("A.glsl", a_src);
+    p.include("B.glsl", b_src);
+    p.include("C.glsl", c_src);
     c.bench_function("three includes", move |b| b.iter(|| p.expand(src).unwrap()));
 }
 
@@ -72,10 +72,10 @@ fn recursive_includes(c: &mut Criterion) {
         void main() {
         }"
     );
-    let p = Context::new()
-        .include("A.glsl", a_src)
-        .include("B.glsl", b_src)
-        .include("C.glsl", c_src);
+    let mut p = Context::new();
+    p.include("A.glsl", a_src);
+    p.include("B.glsl", b_src);
+    p.include("C.glsl", c_src);
     c.bench_function("recursive includes", move |b| {
         b.iter(|| p.expand(src).unwrap())
     });
