@@ -1,0 +1,12 @@
+[package]
+name = "gli"
+version = "0.1.0"
+authors = ["Justin Shrake <justinshrake@gmail.com>"]
+workspace = ".."
+
+[lib]
+name = "gli"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+glsl-include = { version = "0.2", path = ".." }
