@@ -36,10 +36,11 @@ extern crate lazy_static;
 extern crate regex;
 mod error;
 
+pub use error::Error;
+use regex::Regex;
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use regex::Regex;
-pub use error::Error;
 
 /// A Context stores data required to expand source string inputs
 #[derive(Debug, Default)]
@@ -75,7 +76,7 @@ impl<'a> Context<'a> {
 
     /// Recursively expands the #include directives within the GLSL source string and
     /// returns the expanded source and source map
-    pub fn expand(&self, src: &'a str) -> Result<(Vec<&'a str>, SourceMap<'a>), Error> {
+    pub fn expand(&self, src: &'a str) -> Result<(Vec<Cow<'a, str>>, SourceMap<'a>), Error> {
         let mut expanded_src = Vec::new();
         let mut source_map = Vec::new();
         self.expand_recursive(
@@ -96,36 +97,29 @@ impl<'a> Context<'a> {
             .map(|(expanded_src, source_map)| (expanded_src.join("\n"), source_map))
     }
 
-    /// Like [`expand`](#method.expand) but maps the expanded source to a Vec of &[u8]
-    pub fn expand_to_bytes(&self, src: &'a str) -> Result<(Vec<&[u8]>, SourceMap<'a>), Error> {
-        self.expand(src).map(|(expanded_src, source_map)| {
-            (
-                expanded_src.into_iter().map(|x| x.as_bytes()).collect(),
-                source_map,
-            )
-        })
-    }
-
     fn expand_recursive(
         &self,
         in_file: Option<&'a str>,
         src: &'a str,
-        expanded_src: &mut Vec<&'a str>,
+        expanded_src: &mut Vec<Cow<'a, str>>,
         source_map: &mut SourceMap<'a>,
         include_stack: &mut Vec<&'a str>,
         include_set: &mut BTreeSet<&'a str>,
     ) -> Result<(), Error> {
         lazy_static! {
-            static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*(pragma\s*)?include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
+            static ref INCLUDE_RE: Regex = Regex::new(
+                r#"^\s*#\s*(pragma\s*)?include\s+[<"](?P<file>.*)[>"]"#
+            ).expect("failed to compile INCLUDE_RE regex");
         }
-
+        let mut need_line_directive = false;
         // Iterate through each line in the src input
         // - If the line matches our INCLUDE_RE regex, recurse
         // - Otherwise, add the line to our outputs and continue to the next line
         for (line_num, line) in src.lines().enumerate() {
             if let Some(caps) = INCLUDE_RE.captures(line) {
                 // The following expect should be impossible, but write a nice message anyways
-                let cap_match = caps.name("file")
+                let cap_match = caps
+                    .name("file")
                     .expect("Could not find capture group with name \"file\"");
                 let included_file = cap_match.as_str();
 
@@ -161,6 +155,7 @@ impl<'a> Context<'a> {
                         include_set,
                     )?;
                     include_stack.pop();
+                    need_line_directive = true;
                 } else {
                     let in_file = in_file.map(|s| s.to_string());
                     let problem_include = included_file.to_string();
@@ -172,7 +167,13 @@ impl<'a> Context<'a> {
                 }
             } else {
                 // Got a regular line
-                expanded_src.push(line);
+                if need_line_directive {
+                    // add a #line directive to reset the line number so that GL compilation error
+                    // messages contain line numbers that map to the users file
+                    expanded_src.push(Cow::from(format!("#line {} 0", line_num)));
+                }
+                need_line_directive = false;
+                expanded_src.push(Cow::from(line));
                 source_map.push(FileLine {
                     file: in_file,
                     line: line_num,
