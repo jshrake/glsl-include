@@ -25,7 +25,7 @@
 //!         }";
 //!     let platform = "void platform_fn() {}";
 //!     let common = "uniform float iTime;";
-//!     let (expanded_src, source_map) = Context::new()
+//!     let expanded_src = Context::new()
 //!         .include("platform.glsl", platform)
 //!         .include("common.glsl",common)
 //!         .expand_to_string(main).unwrap();
@@ -38,71 +38,65 @@ mod error;
 
 pub use error::Error;
 use regex::Regex;
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::marker::PhantomData;
 
 /// A Context stores data required to expand source string inputs
 #[derive(Debug, Default)]
 pub struct Context<'a> {
-    included_files: BTreeMap<&'a str, &'a str>,
-}
-
-/// A map from the expanded source line number to the corresponding include file line number
-pub type SourceMap<'a> = Vec<FileLine<'a>>;
-
-/// An include file, line number pair
-///
-/// A value of None for `file` corresponds to a line in the source string provided to [method@expand]
-#[derive(Debug)]
-pub struct FileLine<'a> {
-    pub file: Option<&'a str>,
-    pub line: usize,
+    included_files: BTreeMap<String, String>,
+    phantom: PhantomData<&'a String>,
 }
 
 impl<'a> Context<'a> {
     /// Returns an empty Context
-    pub fn new() -> Context<'a> {
+    pub fn new() -> Self {
         Context {
             ..Default::default()
         }
     }
 
     /// Associates an #include name with a GLSL source string
-    pub fn include(&mut self, name: &'a str, src: &'a str) -> &mut Self {
-        self.included_files.insert(name, src);
+    pub fn include<S>(&mut self, name: S, src: S) -> &mut Self
+    where
+        S: Into<String>,
+    {
+        self.included_files.insert(name.into(), src.into());
         self
     }
 
     /// Recursively expands the #include directives within the GLSL source string and
     /// returns the expanded source and source map
-    pub fn expand(&self, src: &'a str) -> Result<(Vec<Cow<'a, str>>, SourceMap<'a>), Error> {
+    pub fn expand<S>(&self, src: S) -> Result<Vec<String>, Error>
+    where
+        S: Into<String>,
+    {
         let mut expanded_src = Vec::new();
-        let mut source_map = Vec::new();
         self.expand_recursive(
-            None,
-            src,
             // data structures to return to the user
             &mut expanded_src,
-            &mut source_map,
             // data structures internal to the algorithm
+            &src.into(),
+            None,
             &mut Vec::new(),
             &mut BTreeSet::new(),
-        ).map(move |_| (expanded_src, source_map))
+        ).map(move |_| expanded_src)
     }
 
     /// Like [`expand`](#method.expand) but joins the expanded source with newlines
-    pub fn expand_to_string(&self, src: &'a str) -> Result<(String, SourceMap<'a>), Error> {
-        self.expand(src)
-            .map(|(expanded_src, source_map)| (expanded_src.join("\n"), source_map))
+    pub fn expand_to_string<S>(&self, src: S) -> Result<String, Error>
+    where
+        S: Into<String>,
+    {
+        self.expand(src).map(|expanded_src| expanded_src.join("\n"))
     }
 
     fn expand_recursive(
-        &self,
-        in_file: Option<&'a str>,
+        &'a self,
+        expanded_src: &mut Vec<String>,
         src: &'a str,
-        expanded_src: &mut Vec<Cow<'a, str>>,
-        source_map: &mut SourceMap<'a>,
+        in_file: Option<&'a str>,
         include_stack: &mut Vec<&'a str>,
         include_set: &mut BTreeSet<&'a str>,
     ) -> Result<(), Error> {
@@ -144,13 +138,12 @@ impl<'a> Context<'a> {
                 }
 
                 // if the included file exists in our context, recurse
-                if let Some(content) = self.included_files.get(included_file) {
+                if let Some(src) = self.included_files.get(included_file) {
                     include_stack.push(&included_file);
                     self.expand_recursive(
-                        Some(included_file),
-                        content,
                         expanded_src,
-                        source_map,
+                        &src,
+                        Some(included_file),
                         include_stack,
                         include_set,
                     )?;
@@ -170,14 +163,10 @@ impl<'a> Context<'a> {
                 if need_line_directive {
                     // add a #line directive to reset the line number so that GL compilation error
                     // messages contain line numbers that map to the users file
-                    expanded_src.push(Cow::from(format!("#line {} 0", line_num)));
+                    expanded_src.push(format!("#line {} 0", line_num));
                 }
                 need_line_directive = false;
-                expanded_src.push(Cow::from(line));
-                source_map.push(FileLine {
-                    file: in_file,
-                    line: line_num,
-                });
+                expanded_src.push(String::from(line));
             }
         }
 
