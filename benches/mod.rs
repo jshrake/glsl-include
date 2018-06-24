@@ -4,8 +4,8 @@ extern crate glsl_include;
 #[macro_use]
 extern crate indoc;
 
-use glsl_include::Context;
 use criterion::Criterion;
+use glsl_include::Context;
 
 fn no_include(c: &mut Criterion) {
     let src = indoc!(

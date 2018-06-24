@@ -28,7 +28,7 @@
 //!     let expanded_src = Context::new()
 //!         .include("platform.glsl", platform)
 //!         .include("common.glsl",common)
-//!         .expand_to_string(main).unwrap();
+//!         .expand(main).unwrap();
 //! }
 //! ```
 #[macro_use]
@@ -67,8 +67,8 @@ impl<'a> Context<'a> {
     }
 
     /// Recursively expands the #include directives within the GLSL source string and
-    /// returns the expanded source and source map
-    pub fn expand<S>(&self, src: S) -> Result<Vec<String>, Error>
+    /// returns the expanded source string
+    pub fn expand<S>(&self, src: S) -> Result<String, Error>
     where
         S: Into<String>,
     {
@@ -81,15 +81,7 @@ impl<'a> Context<'a> {
             None,
             &mut Vec::new(),
             &mut BTreeSet::new(),
-        ).map(move |_| expanded_src)
-    }
-
-    /// Like [`expand`](#method.expand) but joins the expanded source with newlines
-    pub fn expand_to_string<S>(&self, src: S) -> Result<String, Error>
-    where
-        S: Into<String>,
-    {
-        self.expand(src).map(|expanded_src| expanded_src.join("\n"))
+        ).map(move |_| expanded_src.join("\n"))
     }
 
     fn expand_recursive(

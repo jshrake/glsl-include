@@ -11,8 +11,8 @@ fn no_include() {
         void main() {
         }"
     );
-    let expand_to_string_src = Context::new().expand_to_string(src).unwrap();
-    assert_eq!(src, &expand_to_string_src);
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
 }
 
 #[test]
@@ -23,8 +23,8 @@ fn single_line_comments() {
         // #include "A.glsl"
         void main() {}"#
     );
-    let expand_to_string_src = Context::new().expand_to_string(src).unwrap();
-    assert_eq!(src, &expand_to_string_src);
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
 }
 
 #[test]
@@ -34,9 +34,9 @@ fn angle_bracket_include() {
         #include <A.glsl>
         void main() {}"#
     );
-    let expand_to_string_src = Context::new()
+    let expand_src = Context::new()
         .include("A.glsl", "void A() {}")
-        .expand_to_string(src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -44,7 +44,7 @@ fn angle_bracket_include() {
         #line 1 0
         void main() {}"#
     );
-    assert_eq!(expected, expand_to_string_src);
+    assert_eq!(expected, expand_src);
 }
 
 #[test]
@@ -54,9 +54,9 @@ fn quote_include() {
         #include "A.glsl"
         void main() {}"#
     );
-    let expand_to_string_src = Context::new()
+    let expand_src = Context::new()
         .include("A.glsl", "void A() {}")
-        .expand_to_string(src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -64,7 +64,7 @@ fn quote_include() {
         #line 1 0
         void main() {}"#
     );
-    assert_eq!(expected, expand_to_string_src);
+    assert_eq!(expected, expand_src);
 }
 
 #[test]
@@ -76,9 +76,9 @@ fn duplicate_includes() {
         #include <A.glsl>
         void main() {}"#
     );
-    let expand_to_string_src = Context::new()
+    let expand_src = Context::new()
         .include("A.glsl", "void A() {}")
-        .expand_to_string(src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -86,7 +86,7 @@ fn duplicate_includes() {
         #line 3 0
         void main() {}"#
     );
-    assert_eq!(expected, expand_to_string_src);
+    assert_eq!(expected, expand_src);
 }
 
 #[test]
@@ -114,11 +114,11 @@ fn recursive_duplicate_includes() {
         r#"
         void C() {}"#
     );
-    let expand_to_string_src = Context::new()
+    let expand_src = Context::new()
         .include("A.glsl", a_src)
         .include("B.glsl", b_src)
         .include("C.glsl", c_src)
-        .expand_to_string(src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -130,7 +130,7 @@ fn recursive_duplicate_includes() {
         #line 3 0
         void main() {}"#
     );
-    assert_eq!(expected, expand_to_string_src);
+    assert_eq!(expected, expand_src);
 }
 
 #[test]
@@ -140,9 +140,9 @@ fn pragma_include() {
         #pragma  include "A.glsl"
         void main() {}"#
     );
-    let expand_to_string_src = Context::new()
+    let expand_src = Context::new()
         .include("A.glsl", "void A() {}")
-        .expand_to_string(src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -150,7 +150,7 @@ fn pragma_include() {
         #line 1 0
         void main() {}"#
     );
-    assert_eq!(expected, expand_to_string_src);
+    assert_eq!(expected, expand_src);
 }
 
 #[test]
@@ -162,9 +162,9 @@ fn weird_pragma_include() {
         # pragma  include "A.glsl"
         void main() {}"#
     );
-    let expand_to_string_src = Context::new()
+    let expand_src = Context::new()
         .include("A.glsl", "void A() {}")
-        .expand_to_string(src)
+        .expand(src)
         .unwrap();
     let expected = indoc!(
         r#"
@@ -174,7 +174,7 @@ fn weird_pragma_include() {
         #line 3 0
         void main() {}"#
     );
-    assert_eq!(expected, expand_to_string_src);
+    assert_eq!(expected, expand_src);
 }
 
 #[test]
@@ -190,10 +190,7 @@ fn recursive_include() {
         #include "A.glsl"
         void A() {}"#
     );
-    Context::new()
-        .include("A.glsl", a_src)
-        .expand_to_string(src)
-        .unwrap();
+    Context::new().include("A.glsl", a_src).expand(src).unwrap();
 }
 
 #[test]
@@ -223,7 +220,7 @@ fn deep_recursive_include() {
         .include("A.glsl", a_src)
         .include("B.glsl", b_src)
         .include("C.glsl", c_src)
-        .expand_to_string(src);
+        .expand(src);
     match result {
         Err(ref e) => println!("{}", e),
         Ok(_) => (),
@@ -239,7 +236,7 @@ fn non_existent_include() {
         #include "A.glsl"
         void main() {}"#
     );
-    let result = Context::new().expand_to_string(src);
+    let result = Context::new().expand(src);
     match result {
         Err(ref e) => println!("{}", e),
         Ok(_) => (),
