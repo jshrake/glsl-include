@@ -155,7 +155,7 @@ impl<'a> Context<'a> {
                 if need_line_directive {
                     // add a #line directive to reset the line number so that GL compilation error
                     // messages contain line numbers that map to the users file
-                    expanded_src.push(format!("#line {} 0", line_num));
+                    expanded_src.push(format!("#line {} 0", line_num + 1));
                 }
                 need_line_directive = false;
                 expanded_src.push(String::from(line));
