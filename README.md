@@ -16,7 +16,7 @@
 Cargo.toml:
 ```toml
 [dependencies]
-glsl-include = "0.2"
+glsl-include = "0.3"
 ```
 
 main.rs:
@@ -36,10 +36,10 @@ fn main () {
         }";
     let platform = "void platform_fn() {}";
     let common = "uniform float iTime;";
-    let (expanded_src, source_map) = Context::new()
+    let expanded_src = Context::new()
         .include("platform.glsl", platform)
         .include("common.glsl",common)
-        .expand_to_string(main).unwrap();
+        .expand(main).unwrap();
 }
 ```
 
@@ -49,17 +49,15 @@ The library also expands `#pragma include` statements with no additonal configur
 
 ## Benchmarks
 
-Benchmarking makes use of the optional criterion dependency, which depends on rust 1.23
-
 ```
-cargo bench --features "criterion"
+cargo bench
 ```
 
 The workflow I currently use for benchmarking a changeset:
 
 ```
-git checkout master; cargo bench --features "criterion"
-git checkout feature-branch; cargo bench --features "criterion"
+git checkout master; cargo bench
+git checkout feature-branch; cargo bench
 ```
 
 For the best results with criterion, install `gnuplot` (macos: `brew install gnuplot`)
