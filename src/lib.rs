@@ -36,7 +36,7 @@ extern crate lazy_static;
 extern crate regex;
 mod error;
 
-pub use error::Error;
+pub use crate::error::Error;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
