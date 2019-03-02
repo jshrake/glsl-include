@@ -1,4 +1,4 @@
-# glsl-include &emsp; [![Build Status]][travis] [![Build Status-win]][appveyor] [![Latest Version]][crates.io] [![Rustc Version 1.15+]][rustc]
+# glsl-include &emsp; [![Build Status]][travis] [![Build Status-win]][appveyor] [![Latest Version]][crates.io]
 
 [Build Status]: https://travis-ci.org/jshrake/glsl-include.svg?branch=master
 [travis]: https://travis-ci.org/jshrake/glsl-include
@@ -6,8 +6,6 @@
 [appveyor]: https://ci.appveyor.com/project/jshrake/glsl-include
 [Latest Version]: https://img.shields.io/crates/v/glsl-include.svg
 [crates.io]: https://crates.io/crates/glsl-include
-[Rustc Version 1.15+]: https://img.shields.io/badge/rustc-1.15+-lightgray.svg
-[rustc]: https://blog.rust-lang.org/2017/02/02/Rust-1.15.html
 
 **glsl-include is a rust library for expanding #include directives in GLSL source strings**
 
