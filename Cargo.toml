@@ -15,11 +15,6 @@ include = ["src/*.rs","Cargo.toml","README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 travis-ci = { repository = "jshrake/glsl-include" }
 appveyor = { repository = "jshrake/glsl-include" }
 
-[workspace]
-members = [
-  "glsl-include-capi"
-]
-
 [dependencies]
 regex = "0.2"
 lazy_static = "1.0.0"
