@@ -41,7 +41,7 @@ fn angle_bracket_include() {
     let expected = indoc!(
         r#"
         void A() {}
-        #line 1 0
+        #line 2 0
         void main() {}"#
     );
     assert_eq!(expected, expand_src);
@@ -61,7 +61,7 @@ fn quote_include() {
     let expected = indoc!(
         r#"
         void A() {}
-        #line 1 0
+        #line 2 0
         void main() {}"#
     );
     assert_eq!(expected, expand_src);
@@ -83,7 +83,7 @@ fn duplicate_includes() {
     let expected = indoc!(
         r#"
         void A() {}
-        #line 3 0
+        #line 4 0
         void main() {}"#
     );
     assert_eq!(expected, expand_src);
@@ -123,11 +123,11 @@ fn recursive_duplicate_includes() {
     let expected = indoc!(
         r#"
         void C() {}
-        #line 2 0
-        void B() {}
-        #line 2 0
-        void A() {}
         #line 3 0
+        void B() {}
+        #line 3 0
+        void A() {}
+        #line 4 0
         void main() {}"#
     );
     assert_eq!(expected, expand_src);
@@ -147,7 +147,7 @@ fn pragma_include() {
     let expected = indoc!(
         r#"
         void A() {}
-        #line 1 0
+        #line 2 0
         void main() {}"#
     );
     assert_eq!(expected, expand_src);
@@ -171,7 +171,7 @@ fn weird_pragma_include() {
         #pragmapragma include "A.glsl"
         #pragma pragma include "A.glsl"
         void A() {}
-        #line 3 0
+        #line 4 0
         void main() {}"#
     );
     assert_eq!(expected, expand_src);
