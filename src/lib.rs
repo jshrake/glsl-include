@@ -25,10 +25,10 @@
 //!         }";
 //!     let platform = "void platform_fn() {}";
 //!     let common = "uniform float iTime;";
-//!     let (expanded_src, source_map) = Context::new()
+//!     let expanded_src = Context::new()
 //!         .include("platform.glsl", platform)
 //!         .include("common.glsl",common)
-//!         .expand_to_string(main).unwrap();
+//!         .expand(main).unwrap();
 //! }
 //! ```
 #[macro_use]
@@ -36,96 +36,76 @@ extern crate lazy_static;
 extern crate regex;
 mod error;
 
+pub use crate::error::Error;
+use regex::Regex;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use regex::Regex;
-pub use error::Error;
+use std::marker::PhantomData;
 
 /// A Context stores data required to expand source string inputs
 #[derive(Debug, Default)]
 pub struct Context<'a> {
-    included_files: BTreeMap<&'a str, &'a str>,
-}
-
-/// A map from the expanded source line number to the corresponding include file line number
-pub type SourceMap<'a> = Vec<FileLine<'a>>;
-
-/// An include file, line number pair
-///
-/// A value of None for `file` corresponds to a line in the source string provided to [method@expand]
-#[derive(Debug)]
-pub struct FileLine<'a> {
-    pub file: Option<&'a str>,
-    pub line: usize,
+    included_files: BTreeMap<String, String>,
+    phantom: PhantomData<&'a String>,
 }
 
 impl<'a> Context<'a> {
     /// Returns an empty Context
-    pub fn new() -> Context<'a> {
+    pub fn new() -> Self {
         Context {
             ..Default::default()
         }
     }
 
     /// Associates an #include name with a GLSL source string
-    pub fn include(&mut self, name: &'a str, src: &'a str) -> &mut Self {
-        self.included_files.insert(name, src);
+    pub fn include<S>(&mut self, name: S, src: S) -> &mut Self
+    where
+        S: Into<String>,
+    {
+        self.included_files.insert(name.into(), src.into());
         self
     }
 
     /// Recursively expands the #include directives within the GLSL source string and
-    /// returns the expanded source and source map
-    pub fn expand(&self, src: &'a str) -> Result<(Vec<&'a str>, SourceMap<'a>), Error> {
+    /// returns the expanded source string
+    pub fn expand<S>(&self, src: S) -> Result<String, Error>
+    where
+        S: Into<String>,
+    {
         let mut expanded_src = Vec::new();
-        let mut source_map = Vec::new();
         self.expand_recursive(
-            None,
-            src,
             // data structures to return to the user
             &mut expanded_src,
-            &mut source_map,
             // data structures internal to the algorithm
+            &src.into(),
+            None,
             &mut Vec::new(),
             &mut BTreeSet::new(),
-        ).map(move |_| (expanded_src, source_map))
-    }
-
-    /// Like [`expand`](#method.expand) but joins the expanded source with newlines
-    pub fn expand_to_string(&self, src: &'a str) -> Result<(String, SourceMap<'a>), Error> {
-        self.expand(src)
-            .map(|(expanded_src, source_map)| (expanded_src.join("\n"), source_map))
-    }
-
-    /// Like [`expand`](#method.expand) but maps the expanded source to a Vec of &[u8]
-    pub fn expand_to_bytes(&self, src: &'a str) -> Result<(Vec<&[u8]>, SourceMap<'a>), Error> {
-        self.expand(src).map(|(expanded_src, source_map)| {
-            (
-                expanded_src.into_iter().map(|x| x.as_bytes()).collect(),
-                source_map,
-            )
-        })
+        ).map(move |_| expanded_src.join("\n"))
     }
 
     fn expand_recursive(
-        &self,
-        in_file: Option<&'a str>,
+        &'a self,
+        expanded_src: &mut Vec<String>,
         src: &'a str,
-        expanded_src: &mut Vec<&'a str>,
-        source_map: &mut SourceMap<'a>,
+        in_file: Option<&'a str>,
         include_stack: &mut Vec<&'a str>,
         include_set: &mut BTreeSet<&'a str>,
     ) -> Result<(), Error> {
         lazy_static! {
-            static ref INCLUDE_RE : Regex = Regex::new(r#"^\s*#\s*(pragma\s*)?include\s+[<"](?P<file>.*)[>"]"#).expect("failed to compile INCLUDE_RE regex");
+            static ref INCLUDE_RE: Regex = Regex::new(
+                r#"^\s*#\s*(pragma\s*)?include\s+[<"](?P<file>.*)[>"]"#
+            ).expect("failed to compile INCLUDE_RE regex");
         }
-
+        let mut need_line_directive = false;
         // Iterate through each line in the src input
         // - If the line matches our INCLUDE_RE regex, recurse
         // - Otherwise, add the line to our outputs and continue to the next line
         for (line_num, line) in src.lines().enumerate() {
             if let Some(caps) = INCLUDE_RE.captures(line) {
                 // The following expect should be impossible, but write a nice message anyways
-                let cap_match = caps.name("file")
+                let cap_match = caps
+                    .name("file")
                     .expect("Could not find capture group with name \"file\"");
                 let included_file = cap_match.as_str();
 
@@ -150,17 +130,17 @@ impl<'a> Context<'a> {
                 }
 
                 // if the included file exists in our context, recurse
-                if let Some(content) = self.included_files.get(included_file) {
+                if let Some(src) = self.included_files.get(included_file) {
                     include_stack.push(&included_file);
                     self.expand_recursive(
-                        Some(included_file),
-                        content,
                         expanded_src,
-                        source_map,
+                        &src,
+                        Some(included_file),
                         include_stack,
                         include_set,
                     )?;
                     include_stack.pop();
+                    need_line_directive = true;
                 } else {
                     let in_file = in_file.map(|s| s.to_string());
                     let problem_include = included_file.to_string();
@@ -172,11 +152,13 @@ impl<'a> Context<'a> {
                 }
             } else {
                 // Got a regular line
-                expanded_src.push(line);
-                source_map.push(FileLine {
-                    file: in_file,
-                    line: line_num,
-                });
+                if need_line_directive {
+                    // add a #line directive to reset the line number so that GL compilation error
+                    // messages contain line numbers that map to the users file
+                    expanded_src.push(format!("#line {} 0", line_num + 1));
+                }
+                need_line_directive = false;
+                expanded_src.push(String::from(line));
             }
         }
 
