@@ -5,6 +5,94 @@ extern crate indoc;
 use glsl_include::Context;
 
 #[test]
+fn empty() {
+    let src = "";
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
+}
+
+#[test]
+fn whitespace() {
+    let src = " \t  ";
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
+}
+
+#[test]
+fn single_line() {
+    let src = "void main() {}";
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
+}
+
+#[test]
+fn no_include_2() {
+    let src = indoc!(
+        r"
+        #version 450 core
+        void main() {
+        }"
+    );
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
+}
+
+#[test]
+fn ignore_comments_a() {
+    let src = indoc!(
+        r#"
+        /*#include <A.glsl>
+        #include "A.glsl"
+        #pragma include "A.glsl"*/
+        /*
+        #include "A.glsl"*/ void foo() {}
+        void main() {
+        }"#
+    );
+
+    let expand_src = Context::new().expand(src).unwrap();
+    assert_eq!(src, &expand_src);
+}
+
+#[test]
+fn ignore_comments_b() {
+    let src = indoc!(
+        r#"
+        /*
+        #include "A.glsl"
+        */
+        /*
+        #include "A.glsl"*/ void foo() {}
+        #include "B.glsl" /* comment */ void bar() {
+        }
+        void main() {
+        }"#
+    );
+
+    let expected = indoc!(
+        r#"
+        /*
+        #include "A.glsl"
+        */
+        /*
+        #include "A.glsl"*/ void foo() {}
+        void B() {}
+        #line 6 0
+                          /* comment */ void bar() {
+        }
+        void main() {
+        }"#
+    );
+
+    let expand_src = Context::new()
+        .include("B.glsl", "void B() {}")
+        .expand(src)
+        .unwrap();
+
+    assert_eq!(expected, &expand_src);
+}
+
+#[test]
 fn no_include() {
     let src = indoc!(
         r"
